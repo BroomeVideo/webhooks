@@ -1,0 +1,6 @@
+config:
+  aws:region: us-west-2
+  webhooks:slackChannel:
+    secure: AAABAHQx3S2DWZa9A4BPRKszQwxQUsFzCEmvYfrCYk71nkEl+wWWLUZrqA==
+  webhooks:slackToken:
+    secure: AAABANH/tRjIe2fV0sbr8NWPwzERwn7uuH9dndbUiwU9OAbSyrR+fXuolascprCS9QMApL1POfUdGIYIq8seGFP5zyinBOi29nkWYzcsJ50lMTSn7MRRkk2iTVTl+SM78hn73jAynpDQO+oH
