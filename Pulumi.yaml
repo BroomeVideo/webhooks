@@ -1,0 +1,7 @@
+name: webhooks
+runtime: nodejs
+description:
+template:
+  config:
+    aws:region:
+      default: us-west-2
