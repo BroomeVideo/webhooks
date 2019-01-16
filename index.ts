@@ -98,12 +98,12 @@ app.post("/", async (req, res) => {
         }
 
         if (kind === "stack_preview" || kind === "stack_update") {
-            summary = `${resultAccents(payload.result)} ${payload.organization.githubLogin}/${payload.stackName} ${payload.kind} ${payload.result}.`;
+            summary = `${resultEmoji(payload.result)} ${payload.organization.githubLogin}/${payload.stackName} ${payload.kind} ${payload.result}.`;
             message.text = summary;
             message.attachments = [
                 {
                     fallback: `${summary}: ${payload.updateUrl}`,
-                    color: resultAccents(payload.result),
+                    color: resultColor(payload.result),
                     fields: [
                         {
                             title: "Stack",
@@ -134,17 +134,24 @@ app.post("/", async (req, res) => {
                 },
             ];
 
-            function resultAccents(result: string) {
-                return {
-                    succeeded: {
-                        color: "#36a64f",
-                        emoji: ":tropical_drink:",
-                    },
-                    failed: {
-                        color: "#e01563",
-                        emoji: ":confused:",
-                    },
-                };
+            function resultColor(result: string): string {
+                switch (result) {
+                    case "succeeded":
+                        return "#36a64f";
+                    case "failed":
+                        return "#e01563";
+                }
+                return "#e9a820";
+            }
+
+            function resultEmoji(result: string) {
+                switch (result) {
+                    case "succeeded":
+                        return ":tropical_drink:";
+                    case "failed":
+                        return ":confused:";
+                }
+                return "";
             }
         }
 
