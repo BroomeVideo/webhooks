@@ -18,20 +18,74 @@ app.get("/", async (req, res) => {
 
 app.post("/", async (req, res) => {
     try {
-        console.log("Got POST request.");
-        const payload = JSON.parse(<string>req.body.toString());
-        console.log("JSON obj", payload);
-
         const client = new slack.WebClient(slackToken);
-        await client.chat.postMessage(
-            {
-                channel: slackChannel,
-                text: "```" + JSON.stringify(payload, null, 2) + "```",
-                as_user: true,
-            });
+        const payload = JSON.parse(req.body.toString());
+        const summary = `${resultEmoji(payload.result)} ${payload.organization.githubLogin}/${payload.stackName} ${payload.kind} ${payload.result}.`;
+
+        function resultColor(result: string): string {
+            switch (result) {
+                case "succeeded":
+                    return "#36a64f";
+                case "failed":
+                    return "#e01563";
+            }
+            return "e9a820";
+        }
+
+        function resultEmoji(result: string) {
+            switch (result) {
+                case "succeeded":
+                    return ":tropical_drink:";
+                case "failed":
+                    return ":confused:";
+            }
+            return "";
+        }
+
+        const message = {
+            channel: slackChannel,
+            text: summary,
+            as_user: false,
+            username: "BroomeBot",
+            icon_emoji: ":robot_face:",
+            attachments: [
+                {
+                    fallback: `${summary}: ${payload.updateUrl}`,
+                    color: resultColor(payload.result),
+                    fields: [
+
+                        {
+                            title: "Stack",
+                            value: `${payload.organization.githubLogin}/${payload.stackName}`,
+                            short: true,
+                        },
+                        {
+                            title: "User",
+                            value: `${payload.user.name} (${payload.user.githubLogin})`,
+                            short: true,
+                        },
+                        {
+                            title: "Resources",
+                            value: "```" + JSON.stringify(payload.resourceChanges, null, 2) + "```",
+                            short: false,
+                        },
+                        {
+                            title: "Permalink",
+                            value: payload.updateUrl,
+                            short: false,
+                        },
+                    ],
+                },
+            ],
+        };
+
+        await client.chat.postMessage(message);
+
+        console.log("Payload: ", payload);
+        console.log("Message: ", JSON.stringify(message, null, 2));
         res.end();
     } catch (err) {
-        console.log("error: " + err);
+        console.error("Error: ", err);
         res.status(500).end("Internal Server Error");
     }
 });
