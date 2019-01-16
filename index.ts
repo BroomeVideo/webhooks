@@ -19,41 +19,92 @@ app.get("/", async (req, res) => {
 app.post("/", async (req, res) => {
     try {
         const client = new slack.WebClient(slackToken);
+        const kind = req.headers["pulumi-webhook-kind"];
+
         const payload = JSON.parse(req.body.toString());
-        const summary = `${resultEmoji(payload.result)} ${payload.organization.githubLogin}/${payload.stackName} ${payload.kind} ${payload.result}.`;
+        console.log("Payload: ", payload);
 
-        function resultColor(result: string): string {
-            switch (result) {
-                case "succeeded":
-                    return "#36a64f";
-                case "failed":
-                    return "#e01563";
-            }
-            return "e9a820";
-        }
+        let summary: string = "";
 
-        function resultEmoji(result: string) {
-            switch (result) {
-                case "succeeded":
-                    return ":tropical_drink:";
-                case "failed":
-                    return ":confused:";
-            }
-            return "";
-        }
-
-        const message = {
+        let message: any = {
             channel: slackChannel,
-            text: summary,
             as_user: false,
             username: "BroomeBot",
             icon_emoji: ":robot_face:",
-            attachments: [
+        };
+
+        if (kind === "stack") {
+            summary = `${payload.organization.githubLogin}/${payload.stackName} ${payload.action}.`;
+            message.text = summary;
+            message.attachments =[
+                {
+                    fallback: summary,
+                    fields: [
+                        {
+                            title: "User",
+                            value: `${payload.user.name} (${payload.user.githubLogin})`,
+                            short: false,
+                        },
+                        {
+                            title: "Action",
+                            value: payload.action,
+                            short: false,
+                        },
+                    ],
+                },
+            ];
+        }
+
+        if (kind === "team") {
+            summary = `${payload.organization.githubLogin} team ${payload.action}.`;
+            message.text = summary;
+            message.attachments = [
+                {
+                    fallback: summary,
+                    fields: [
+                        {
+                            title: "User",
+                            value: `${payload.user.name} (${payload.user.githubLogin})`,
+                            short: true,
+                        },
+                        {
+                            title: "Team",
+                            value: payload.team.name,
+                            short: true,
+                        },
+                        {
+                            title: "Stack",
+                            value: `${payload.organization.githubLogin}/${payload.stackName}`,
+                            short: true,
+                        },
+                        {
+                            title: "Action",
+                            value: payload.action,
+                            short: true,
+                        },
+                        {
+                            title: "Members",
+                            value: payload.team.members.map((m: any) => `${m.name} (${m.githubLogin})`).join("\n"),
+                            short: false,
+                        },
+                        {
+                            title: "Stacks",
+                            value: payload.team.stacks.map((s: any) => `${s.stackName} (${s.permission})`).join("\n"),
+                            short: false,
+                        },
+                    ],
+                },
+            ];
+        }
+
+        if (kind === "stack_preview" || kind === "stack_update") {
+            summary = `${resultAccents(payload.result)} ${payload.organization.githubLogin}/${payload.stackName} ${payload.kind} ${payload.result}.`;
+            message.text = summary;
+            message.attachments = [
                 {
                     fallback: `${summary}: ${payload.updateUrl}`,
-                    color: resultColor(payload.result),
+                    color: resultAccents(payload.result),
                     fields: [
-
                         {
                             title: "Stack",
                             value: `${payload.organization.githubLogin}/${payload.stackName}`,
@@ -63,6 +114,11 @@ app.post("/", async (req, res) => {
                             title: "User",
                             value: `${payload.user.name} (${payload.user.githubLogin})`,
                             short: true,
+                        },
+                        {
+                            title: "Event Kind",
+                            value: kind,
+                            short: false,
                         },
                         {
                             title: "Resources",
@@ -76,14 +132,26 @@ app.post("/", async (req, res) => {
                         },
                     ],
                 },
-            ],
-        };
+            ];
+
+            function resultAccents(result: string) {
+                return {
+                    succeeded: {
+                        color: "#36a64f",
+                        emoji: ":tropical_drink:",
+                    },
+                    failed: {
+                        color: "#e01563",
+                        emoji: ":confused:",
+                    },
+                };
+            }
+        }
 
         await client.chat.postMessage(message);
-
-        console.log("Payload: ", payload);
         console.log("Message: ", JSON.stringify(message, null, 2));
         res.end();
+
     } catch (err) {
         console.error("Error: ", err);
         res.status(500).end("Internal Server Error");
