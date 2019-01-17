@@ -1,21 +1,17 @@
-// Inspired by:
-// https://github.com/pulumi/home/blob/master/infrastructure/build-failure-notifier/index.ts
-
 import * as pulumi from "@pulumi/pulumi";
 import * as cloud from "@pulumi/cloud-aws";
 import * as slack from "@slack/client";
 
-const config = new pulumi.Config();
-const slackChannel = config.require("slackChannel");
-const slackToken = config.require("slackToken");
 const app = new cloud.HttpEndpoint("webhooks");
 
-app.get("/", async (req, res) => {
-    res.status(200);
-    res.write("BroomeVideo/webhooks\n");
-    res.end();
-});
+const config = new pulumi.Config();
 
+// Pull the destination channel and Slack token from the
+// stack-specific configuration.
+const slackChannel = config.require("slackChannel");
+const slackToken = config.require("slackToken");
+
+// Define an HTTP POST handler for receiving the Pulumi service webhook.
 app.post("/", async (req, res) => {
     try {
         const client = new slack.WebClient(slackToken);
@@ -24,14 +20,16 @@ app.post("/", async (req, res) => {
         const payload = JSON.parse(req.body.toString());
         console.log("Payload: ", payload);
 
-        let summary: string = "";
-
+        let summary: string;
         let message: any = {
             channel: slackChannel,
             as_user: false,
             username: "BroomeBot",
             icon_emoji: ":robot_face:",
         };
+
+        // Vary the message formatting slightly based on the kind of webhook received.
+        // See the Pulumi documentation for details.
 
         if (kind === "stack") {
             summary = `${payload.organization.githubLogin}/${payload.stackName} ${payload.action}.`;
@@ -165,4 +163,5 @@ app.post("/", async (req, res) => {
     }
 });
 
+// Export the webhook's public URL.
 export const url = app.publish().url;
