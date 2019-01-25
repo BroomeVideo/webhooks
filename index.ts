@@ -97,7 +97,7 @@ app.post("/", async (req, res) => {
         }
 
         if (kind === "stack_preview" || kind === "stack_update") {
-            summary = `The ${payload.kind} to stack ${payload.organization.githubLogin}/${payload.stackName} ${payload.result}.`;
+            summary = `${payload.organization.githubLogin}/${payload.stackName} ${payload.kind} ${payload.result}.`;
             message.text = `${resultEmoji(payload.result)} ${summary}`;
             message.attachments = [
                 {
